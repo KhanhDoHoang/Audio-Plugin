@@ -99,8 +99,11 @@ void SimpleEQProjAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     juce::dsp::ProcessSpec spec;
 
     spec.maximumBlockSize = samplesPerBlock;
-    spec.numChannels = 2;
+
+    spec.numChannels = 1;
+
     spec.sampleRate = sampleRate;
+
     leftChain.prepare(spec);
     rightChain.prepare(spec);
 }
@@ -150,15 +153,15 @@ void SimpleEQProjAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // when they first compile a plugin, but obviously you don't need to keep
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear(i, 0, buffer.getNumSamples());
 
     juce::dsp::AudioBlock<float> block(buffer);
 
     auto leftBlock = block.getSingleChannelBlock(0);
-    auto rigthtBlock = block.getSingleChannelBlock(1);
+    auto rightBlock = block.getSingleChannelBlock(1);
 
     juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
-    juce::dsp::ProcessContextReplacing<float> rightContext(rigthtBlock);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
 
     leftChain.process(leftContext);
     rightChain.process(rightContext);
@@ -196,49 +199,48 @@ SimpleEQProjAudioProcessor::createParameterLayout() {
     //Quality frequency param
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "LowCut Freq",  //frequency of low note
-        "LowCut Freq", 
-        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 1.0f), //the decibens and difference when the slider changing
-        20.0f)); //20hz => default value 
-    //2000 max hz of human hearing range
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "HighCut Freq",  
-        "HighCut Freq",  //frequency of high note
-        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 1.0f), //the decibens and difference when the slider changing
-        2000.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Freq",
+                                                           "LowCut Freq",
+                                                           juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
+                                                           20.f));
     
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Peak Freq",  
-        "Peak Freq",  //frequency of high note
-        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 1.0f), //the decibens and difference when the slider changing
-        750.0f)); 
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Peak Gain",
-        "Peak Gain",  //frequency of high note
-        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.5f, 0.5f), //Decibens from -24 -> 24, dont want to be default
-        0.0f)); 
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Peak Quality",
-        "Peak Quality",  //frequency of high note
-        juce::NormalisableRange<float>(0.1f, 10.0f, 0.05f, 1.0f), //Decibens from -24 -> 24, dont want to be default
-        1.0f));
-
+    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Freq",
+                                                           "HighCut Freq",
+                                                           juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
+                                                           20000.f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Freq",
+                                                           "Peak Freq",
+                                                           juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
+                                                           750.f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Gain",
+                                                           "Peak Gain",
+                                                           juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                           0.0f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Quality",
+                                                           "Peak Quality",
+                                                           juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
+                                                           1.f));
+    
     juce::StringArray stringArray;
-    for (int i = 0; i < 4; i++) {
+    for( int i = 0; i < 4; ++i )
+    {
         juce::String str;
-        str << (12 + i * 12);
+        str << (12 + i*12);
         str << " db/Oct";
         stringArray.add(str);
     }
-
+    
     layout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope", stringArray, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope", stringArray, 0));
-
-
+    
+    layout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
+    layout.add(std::make_unique<juce::AudioParameterBool>("Peak Bypassed", "Peak Bypassed", false));
+    layout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypassed", "HighCut Bypassed", false));
+    layout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Enabled", "Analyzer Enabled", true));
+    
     return layout;
 }
 
